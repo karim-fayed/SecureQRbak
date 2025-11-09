@@ -1,0 +1,77 @@
+# ================================
+# ✅ Base: Next.js Production Setup
+# ================================
+
+# Node dependencies
+/node_modules
+/node_modules_old
+
+# Build outputs
+/.next
+/out
+/build
+/dist
+/.turbo
+/.cache
+/.vercel
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs
+*.log
+
+# Environment variables (DO NOT COMMIT SECRETS)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Temporary or test folders
+/temp
+/tmp
+/_tmp_*/
+cache/
+coverage/
+
+# Android / mobile builds
+*.apk
+*.aab
+SecureQR_mob/
+
+# Project-specific folders you don’t need on server
+/scripts
+/hooks
+/lib
+/styles
+/types
+/tests
+/playground
+/docs
+
+# Unneeded text/docs
+README*.md
+TODO.md
+api-documentation.md
+cookies*.txt
+
+# Old lock or archive files
+pnpm-lock.yaml.old
+*.zip
+*.rar
+*.7z

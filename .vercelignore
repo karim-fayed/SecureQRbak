@@ -1,0 +1,61 @@
+# ==================================
+# ✅ Optimal .vercelignore for Next.js
+# ==================================
+
+# Node dependencies
+node_modules/
+node_modules_old/
+
+# Build & cache folders
+.next/
+out/
+build/
+dist/
+.turbo/
+.cache/
+.vercel/
+
+# Logs and debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs/
+*.log
+
+# Environment and secret files
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Source or development-only folders
+temp/
+tmp/
+_tmp_*/
+SecureQR_mob/
+scripts/
+hooks/
+lib/
+styles/
+types/
+tests/
+playground/
+docs/
+cache/
+
+# Android / mobile builds
+*.apk
+*.aab
+
+# Miscellaneous
+README*.md
+TODO.md
+api-documentation.md
+cookies*.txt
+*.zip
+*.rar
+*.7z
+pnpm-lock.yaml.old
