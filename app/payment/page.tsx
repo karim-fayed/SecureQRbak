@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, CreditCard, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useCurrentUser } from "../../lib/auth-hooks";
+import { useCurrentUser } from "@/lib/auth-hooks"
 
 function PaymentContent() {
   const searchParams = useSearchParams();

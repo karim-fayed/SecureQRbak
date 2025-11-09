@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { QrCode, ArrowLeft, Download, Copy, Share2, Check, Clock, Bell, Shield, User, Key, Eye } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { authAPI } from "../../../lib/api-client"
+import { authAPI } from "@/lib/api-client"
 
 export default function SettingsPage() {  
   const { toast } = useToast()

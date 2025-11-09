@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { QrCode, Upload, Camera, CheckCircle, XCircle, ArrowLeft, Loader2, ShieldAlert, Shield } from "lucide-react"
 import dynamic from "next/dynamic"
-import { qrCodeAPI } from "../../../lib/api-client"
+import { qrCodeAPI } from "@/lib/api-client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 // تعريف الأنواع المطلوبة

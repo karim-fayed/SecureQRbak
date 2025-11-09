@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { QrCode, ArrowLeft, Download, Copy, Share2, AlertTriangle, Check } from "lucide-react"
-import { qrCodeAPI, authAPI } from "../../../lib/api-client"
+import { qrCodeAPI, authAPI } from "@/lib/api-client"
 import FreeUsageStatus from "@/components/ui/free-usage-status"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/components/ui/use-toast"
