@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+import path from 'path';
+
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -12,6 +14,13 @@ const nextConfig = {
   experimental: {
     swcPlugins: [],
   },
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),  // إضافة هذا السطر لربط @ مع الجذر
+    };
+    return config;
+  },
 }
 
-export default nextConfig
+export default nextConfig;
