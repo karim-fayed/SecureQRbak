@@ -1,71 +1,87 @@
-//app/api/generate
 import { type NextRequest, NextResponse } from "next/server"
 import { generateQRCode } from "@/lib/qr-generator"
-import { qrCodeOperations, anonymousUsageOperations } from "@/lib/database-abstraction"
+import { qrCodeOperations, anonymousUsageOperations, userOperations } from "@/lib/database-abstraction"
 import { createEncryptedQRData, generateUUID } from "@/lib/encryption"
 
-// المفتاح السري للتشفير (نستخدم الآن من متغيرات البيئة)
 const SECRET_KEY = process.env.API_PRIVATE_KEY || "58c5b930-923d-40ce-8f94-1ca693c20034"
-
-// الحد الأقصى للاستخدام المجاني
 const FREE_USAGE_LIMIT = 20;
 
 export async function POST(request: NextRequest) {
   try {
-    // استخراج البيانات من الطلب
     const body = await request.json()
-    const { data, options, name, description, userId, expiresAt, useLimit } = body
+    const { data, options, name, description, userId, expiresAt, useLimit, macAddress } = body
     const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
-    // التحقق من وجود البيانات
     if (!data) {
       return NextResponse.json({ error: "البيانات مطلوبة لتوليد رمز QR" }, { status: 400 })
     }
 
-    // التحقق من المستخدم - إذا لم يكن هناك مستخدم، فهذا استخدام مجاني
+    // التحقق من المستخدم المجاني أو المدفوع
     if (!userId) {
-      // تحقق من عدد مرات الاستخدام المجاني للمستخدم المجهول
-      const anonymousResult = await anonymousUsageOperations.findByIp(ipAddress);
-
+      const anonymousResult = await anonymousUsageOperations.findByIp(ipAddress, macAddress);
+      
       if (anonymousResult.success && anonymousResult.data) {
-        const anonymousUser = anonymousResult.data;
+        const { count, lastUsed, macAddressLinked } = anonymousResult.data;
 
-        // إذا تجاوز الحد الأقصى للاستخدام المجاني
-        if (anonymousUser.count >= FREE_USAGE_LIMIT) {
+        // تحقق إذا كان قد تم ربط الـ MAC address بالبريد الإلكتروني
+        if (!macAddressLinked && macAddress) {
+          await anonymousUsageOperations.linkMacToEmail(ipAddress, macAddress);
+        }
+
+        // تحقق من عدد مرات الاستخدام المجاني
+        if (count >= FREE_USAGE_LIMIT) {
           return NextResponse.json({
             error: "لقد تجاوزت الحد الأقصى للاستخدام المجاني. يرجى إنشاء حساب للمتابعة.",
             limitReached: true,
-            usageCount: anonymousUser.count
+            usageCount: count
           }, { status: 403 });
         }
 
         // تحديث عدد مرات الاستخدام
-        await anonymousUsageOperations.update(ipAddress, {
-          count: anonymousUser.count + 1,
+        await anonymousUsageOperations.update(ipAddress, macAddress, {
+          count: count + 1,
           lastUsed: new Date()
         });
       } else {
         // إنشاء سجل جديد للمستخدم المجهول
         await anonymousUsageOperations.create({
           ipAddress,
+          macAddress,
           userAgent,
           count: 1,
-          lastUsed: new Date()
+          lastUsed: new Date(),
+          macAddressLinked: !!macAddress
         });
+      }
+    } else {
+      // في حالة المستخدم المدفوع (المشترك)
+      const user = await userOperations.findById(userId);
+
+      if (!user || !user.subscription || user.subscription.plan !== 'premium') {
+        return NextResponse.json({
+          error: "يتطلب الوصول إلى هذه الميزة اشتراكًا مميزًا"
+        }, { status: 403 });
       }
     }
 
-    // تشفير البيانات
-    const encryptedDataObj = createEncryptedQRData(data, SECRET_KEY)
+    // التحقق من صلاحية رمز QR قبل توليده
+    const qrValidityCheck = await qrCodeOperations.isQRCodeValid({ userId, expiresAt });
+    if (!qrValidityCheck) {
+      return NextResponse.json({
+        error: "رمز QR غير صالح أو انتهت صلاحية البيانات"
+      }, { status: 400 });
+    }
 
-    // توليد رمز QR مشفر
-    const qrCodeDataURL = await generateQRCode(data, SECRET_KEY, options || {})
+    // توليد التشفير ورمز QR بالتوازي لزيادة السرعة
+    const [encryptedDataObj, qrCodeDataURL] = await Promise.all([
+      createEncryptedQRData(data, SECRET_KEY),
+      generateQRCode(data, SECRET_KEY, options || {})
+    ]);
 
-    // إنشاء كود تحقق
     const verificationCode = generateUUID().substring(0, 8);
 
-    // تخزين معلومات رمز QR في قاعدة البيانات باستخدام العمليات المزدوجة
+    // تخزين البيانات في قاعدة البيانات
     const qrResult = await qrCodeOperations.create({
       name: name || 'QR Code',
       data: JSON.stringify(data),
@@ -74,37 +90,31 @@ export async function POST(request: NextRequest) {
       userId: userId || '',
       isActive: true,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-      useLimit: useLimit,
+      useLimit,
       useCount: 0,
       anonymousCreation: !userId,
-      verificationCode: verificationCode
+      verificationCode
     });
 
-    // التحقق من نجاح العملية
     if (!qrResult.mongoSuccess) {
       console.error("MongoDB QR code creation failed:", qrResult.mongoError);
       return NextResponse.json({ error: "حدث خطأ أثناء حفظ رمز QR" }, { status: 500 });
     }
 
-    // تسجيل حالة المزامنة
     if (!qrResult.sqlSuccess) {
       console.warn("SQL Server QR code sync failed:", qrResult.sqlError);
-      // متابعة مع النجاح في MongoDB
     }
 
-    // إرجاع رمز QR كاستجابة
     return NextResponse.json({
       success: true,
       qrCode: qrCodeDataURL,
-      qrCodeId: qrResult.mongoSuccess ? 'generated' : undefined, // يمكن تحسين هذا لاحقاً
-      verificationCode: verificationCode,
-      syncStatus: {
-        mongoSuccess: qrResult.mongoSuccess,
-        sqlSuccess: qrResult.sqlSuccess
-      }
-    })
+      qrCodeId: qrResult.mongoSuccess ? 'generated' : undefined,
+      verificationCode,
+      syncStatus: qrResult
+    });
+    
   } catch (error) {
-    console.error("Error generating QR code:", error)
+    console.error("Error generating QR code:", error);
     return NextResponse.json({ error: "حدث خطأ أثناء توليد رمز QR" }, { status: 500 })
   }
 }
