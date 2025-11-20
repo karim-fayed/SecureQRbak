@@ -1,3 +1,4 @@
+//app/api/generate
 import { type NextRequest, NextResponse } from "next/server"
 import { generateQRCode } from "@/lib/qr-generator"
 import { qrCodeOperations, anonymousUsageOperations } from "@/lib/database-abstraction"
