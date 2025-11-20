@@ -1,61 +1,93 @@
-// lib/auth-hooks.ts
-import { useState, useEffect } from 'react';
-import { apiClient } from '@/lib/api-client';
-
-export const useAuth = () => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // محاولة تحميل المستخدم من التخزين المحلي إذا كان قد تم تسجيل الدخول مسبقًا
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  // دالة تسجيل الدخول
-  const login = async (username: string, password: string) => {
-    setLoading(true);
-    setError(null); // إعادة تعيين الأخطاء السابقة
+export const apiClient = {
+  // دالة لتسجيل الدخول
+  login: async (username: string, password: string) => {
     try {
-      // تحقق من أن المدخلات غير فارغة
-      if (!username || !password) {
-        throw new Error("اسم المستخدم وكلمة المرور مطلوبان");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://your-railway-url';
+
+      const response = await fetch(`${apiUrl}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Login failed with status: ${response.status}`);
       }
 
-      // إرسال طلب إلى الخادم لتسجيل الدخول
-      const result = await apiClient.login(username, password);
+      const data = await response.json();
 
-      // التحقق من نتيجة الخادم
-      if (result.success && result.user) {
-        setUser(result.user);
-        localStorage.setItem('user', JSON.stringify(result.user)); // تخزين البيانات في localStorage
-
-        // تخزين الـ token في localStorage أو sessionStorage إذا لزم الأمر
-        if (result.token) {
-          localStorage.setItem('auth-token', result.token);
-        }
-
-        return result;
-      } else {
-        throw new Error(result.error || "حدث خطأ أثناء تسجيل الدخول");
+      // تخزين الـ token في الكوكيز وليس في localStorage
+      if (data.token) {
+        document.cookie = `authToken=${data.token}; path=/; secure; HttpOnly; SameSite=Lax`;
       }
-    } catch (err: any) {
-      // التعامل مع الأخطاء
-      setError(err.message || "حدث خطأ غير متوقع");
-    } finally {
-      setLoading(false);
+
+      return data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-  };
+  },
 
-  // دالة تسجيل الخروج
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('auth-token');
-  };
+  // دالة لتسجيل الخروج
+  logout: () => {
+    document.cookie = 'authToken=; Max-Age=0; path=/; secure; HttpOnly; SameSite=Lax';
+    console.log('User logged out');
+  },
 
-  return { user, login, logout, loading, error };
+  // دالة للحصول على بيانات المستخدم باستخدام JWT من الكوكيز
+  getCurrentUser: async () => {
+    try {
+      const token = getCookie('authToken');
+      if (!token) throw new Error('Token not found. Please log in.');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/current-user`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user data: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      throw error;
+    }
+  },
+
+  // دالة للتحقق من صحة رمز JWT
+  validateToken: async () => {
+    try {
+      const token = getCookie('authToken');
+      if (!token) throw new Error('Token not found. Please log in.');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/validate-token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) throw new Error('Invalid token');
+      return await response.json();
+    } catch (error) {
+      console.error('Token validation error:', error);
+      throw error;
+    }
+  },
 };
+
+// دالة للمساعدة في قراءة الكوكيز
+function getCookie(name: string) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift();
+  return undefined;
+}
