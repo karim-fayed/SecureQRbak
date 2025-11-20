@@ -1,0 +1,13 @@
+{
+  "name": "secureqr-sync-service",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "mongoose": "^8.0.0",
+    "mssql": "^10.0.0",
+    "p-queue": "^7.0.0",
+    "winston": "^3.18.3"
+  }
+}
