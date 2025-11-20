@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, User } from "@/lib/db";
+import { userOperations } from "@/lib/database-abstraction";
 import { hash } from "bcrypt";
 
 export async function POST(request: NextRequest) {
@@ -12,39 +12,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "جميع الحقول مطلوبة" }, { status: 400 });
     }
 
-    // Connect to database
-    await connectToDatabase();
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return NextResponse.json({ error: "البريد الإلكتروني مسجل بالفعل" }, { status: 400 });
-    }
-
     // Hash password
     const hashedPassword = await hash(password, 10);
 
-    // Create user with free plan (API keys only for premium/enterprise)
-    const user = await User.create({
+    // Create user using dual database operations
+    const result = await userOperations.create({
       name,
       email,
       password: hashedPassword,
       subscription: {
         plan: 'free',
-        status: 'active'
+        features: []
       }
       // API keys are only created for premium/enterprise users
     });
 
+    // Check if MongoDB operation succeeded
+    if (!result.mongoSuccess) {
+      console.error("MongoDB user creation failed:", result.mongoError);
+      return NextResponse.json({ error: "حدث خطأ أثناء تسجيل المستخدم" }, { status: 500 });
+    }
+
+    // Log SQL Server sync status
+    if (!result.sqlSuccess) {
+      console.warn("SQL Server user sync failed:", result.sqlError);
+      // Continue with success since MongoDB succeeded
+    }
+
     // Return success without sensitive data
     return NextResponse.json({
       success: true,
+      message: "تم تسجيل المستخدم بنجاح",
       user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        subscription: user.subscription
-        // Don't return API keys for free users
+        name,
+        email,
+        subscription: {
+          plan: 'free'
+        }
+      },
+      syncStatus: {
+        mongoSuccess: result.mongoSuccess,
+        sqlSuccess: result.sqlSuccess
       }
     });
   } catch (error) {

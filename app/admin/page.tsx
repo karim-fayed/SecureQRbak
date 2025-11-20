@@ -20,17 +20,18 @@ export default async function AdminDashboard() {
   // جلب بيانات المستخدم من قاعدة البيانات
   await connectToDatabase();
   
-  // التأكد من صلاحيات المالك دائماً
-  await ensureOwnerPrivileges(userToken.id);
-  
   const userData = await User.findById(userToken.id).select('-password');
 
-  // التحقق من صلاحيات Admin (يشمل المالك)
-  const hasAdmin = await hasAdminPrivileges(userToken.id);
-  if (!userData || !hasAdmin) {
+  if (!userData) {
     redirect("/dashboard");
   }
-  
+
+  // التأكد من صلاحيات المدير (يشمل المالك)
+  const hasAdmin = await hasAdminPrivileges(userToken.id);
+  if (!hasAdmin) {
+    redirect("/dashboard");
+  }
+
   const isOwner = isOwnerEmail(userData.email);
 
   // جلب إحصائيات النظام
@@ -279,6 +280,19 @@ export default async function AdminDashboard() {
 
         {/* أزرار الإدارة السريعة */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Link href="/admin/password-reset-requests">
+            <Card className="hover:shadow-xl transition-all cursor-pointer border-2 hover:border-red-500 bg-gradient-to-br from-white to-red-50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <AlertCircle className="h-8 w-8 text-red-600" />
+                  <ArrowLeft className="h-4 w-4 text-slate-400" />
+                </div>
+                <CardTitle className="mt-2">طلبات إعادة كلمة المرور</CardTitle>
+                <CardDescription>مراجعة طلبات إعادة تعيين كلمة المرور</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
           <Link href="/admin/users">
             <Card className="hover:shadow-xl transition-all cursor-pointer border-2 hover:border-blue-500 bg-gradient-to-br from-white to-blue-50">
               <CardHeader>

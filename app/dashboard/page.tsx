@@ -109,35 +109,41 @@ export default async function Dashboard() {
           </Link>
 
           <Link
-            href="/admin/qr-verification"
-            className="flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-700 transition-all group"
-          >
-            <QrCode className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            <span className="font-medium">التحقق من QR</span>
-          </Link>
-          
-          <Link 
-            href="/dashboard/settings" 
+            href="/dashboard/settings"
             className="flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-700 transition-all group"
           >
             <Settings className="h-5 w-5 group-hover:scale-110 transition-transform" />
             <span className="font-medium">الإعدادات</span>
           </Link>
-          
+
           {userData?.role === 'admin' && (
-            <div className="pt-4 border-t border-slate-700">
-              <Link 
-                href="/admin" 
-                className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 transition-all group shadow-lg"
-              >
-                {isOwner ? (
-                  <Crown className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                ) : (
-                  <Shield className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                )}
-                <span className="font-bold">نفذكف</span>
-              </Link>
-            </div>
+            <>
+              {/* زر الإشعارات في الشريط الجانبي */}
+              <div className="pt-4 border-t border-slate-700">
+                <div className="flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-700 transition-all group cursor-pointer relative">
+                  <Bell className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium">الإشعارات</span>
+                  {/* شارة عدد الطلبات المعلقة */}
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    <AdminNotifications showOnlyBadge={true} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href="/admin"
+                  className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 transition-all group shadow-lg"
+                >
+                  {isOwner ? (
+                    <Crown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                  ) : (
+                    <Shield className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                  )}
+                  <span className="font-bold">نفذكف</span>
+                </Link>
+              </div>
+            </>
           )}
         </nav>
         
@@ -168,14 +174,6 @@ export default async function Dashboard() {
                 </p>
               </div>
               <div className="flex items-center space-x-3">
-                {userData?.role === 'admin' && (
-                  <Link href="/admin">
-                    <Button variant="outline" className="flex items-center space-x-2">
-                      <Bell className="h-4 w-4" />
-                      <span>الإشعارات</span>
-                    </Button>
-                  </Link>
-                )}
                 <Link href="/dashboard/create">
                   <Button className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all">
                     <Plus className="h-4 w-4 ml-2" />

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, User } from "@/lib/db";
+import { userOperations } from "@/lib/database-abstraction";
 import { compare } from "bcrypt";
 import * as jose from "jose";
 
@@ -16,20 +16,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "البريد الإلكتروني وكلمة المرور مطلوبان" }, { status: 400 });
     }
 
-    // Connect to database
-    await connectToDatabase();
-
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
+    // Find user using dual database operations (read with fallback)
+    const userResult = await userOperations.findByEmail(email);
+    if (!userResult.success || !userResult.data) {
       return NextResponse.json({ error: "بيانات الاعتماد غير صالحة" }, { status: 401 });
     }
+
+    const user = userResult.data;
 
     // Verify password
     const passwordValid = await compare(password, user.password);
     if (!passwordValid) {
       return NextResponse.json({ error: "بيانات الاعتماد غير صالحة" }, { status: 401 });
-    }    // Create JWT token using jose (Edge runtime compatible)
+    }
     const encoder = new TextEncoder();
     const secretKey = encoder.encode(JWT_SECRET);
       const token = await new jose.SignJWT({

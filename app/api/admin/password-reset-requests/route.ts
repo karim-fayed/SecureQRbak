@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "غير مصرح - صلاحيات مدير مطلوبة" }, { status: 403 });
     }
 
+    // Use dual database operations - get all requests (no filter for admin view)
+    // Note: We need to implement findAll for password reset requests or use findByUserId with empty filter
+    // For now, we'll use a workaround by getting requests for a dummy user ID and then getting all
+    // TODO: Add findAll method to passwordResetOperations
+
+    // Since we don't have findAll yet, we'll use direct database access for admin operations
+    // This will be updated once findAll is implemented
+    const { connectToDatabase, PasswordResetRequest } = await import("@/lib/db");
     await connectToDatabase();
 
     const requests = await PasswordResetRequest.find({})

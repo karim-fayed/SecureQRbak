@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, User } from "@/lib/db";
+import { userOperations } from "@/lib/database-abstraction";
 import * as jose from 'jose';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || "your-default-jwt-secret";
@@ -17,11 +17,10 @@ async function isAdmin(request: NextRequest): Promise<{ isAdmin: boolean; userId
     const { payload } = await jose.jwtVerify(token, secretKey);
     const userId = (payload as any).id;
 
-    await connectToDatabase();
-    const user = await User.findById(userId);
-    
+    const userResult = await userOperations.findById(userId);
+
     return {
-      isAdmin: user?.role === 'admin',
+      isAdmin: userResult.success && userResult.data?.role === 'admin',
       userId: userId
     };
   } catch {
@@ -37,23 +36,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "غير مصرح - صلاحيات مدير مطلوبة" }, { status: 403 });
     }
 
-    await connectToDatabase();
+    // Use dual database operations for admin user listing
+    const usersResult = await userOperations.findAll(
+      {},
+      { sort: { createdAt: -1 } }
+    );
 
-    const users = await User.find()
-      .select('-password')
-      .sort({ createdAt: -1 });
+    if (!usersResult.success) {
+      console.error("Failed to fetch users:", usersResult.error);
+      return NextResponse.json({ error: "حدث خطأ أثناء جلب المستخدمين" }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
-      users: users.map(user => ({
-        _id: user._id,
+      users: (usersResult.data || []).map((user: any) => ({
+        _id: user._id || user.id,
         name: user.name,
         email: user.email,
         role: user.role || 'user',
         subscription: user.subscription || { plan: 'free', status: 'active' },
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
-      }))
+      })),
+      source: usersResult.source // Indicate which database was used
     });
   } catch (error) {
     console.error("Error fetching users:", error);

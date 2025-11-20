@@ -97,7 +97,7 @@ async function verifyToken(token: string): Promise<boolean> {
 
     // Verify and decode the token
     await jose.jwtVerify(token, secretKey);
-    console.log('Token verified successfully with jose');
+    // Removed console.log to prevent excessive logging
     return true;
   } catch (error) {
     console.error('Token verification failed:', error);

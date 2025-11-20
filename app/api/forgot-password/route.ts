@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase, User, PasswordResetRequest } from "@/lib/db";
 import * as crypto from 'crypto';
-import { sendPasswordResetNotificationToAdmin, sendPasswordResetLinkToUser } from "@/lib/email-service";
+import { sendPasswordResetNotificationToAdmin } from "@/lib/email-service";
+import { passwordResetOperations } from "@/lib/database-abstraction";
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,16 +40,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create password reset request
-    const resetRequest = new PasswordResetRequest({
-      userId: user._id,
+    // Create password reset request using dual database operations
+    const resetResult = await passwordResetOperations.create({
+      userId: user._id.toString(),
       userEmail: user.email,
       userName: user.name,
       status: 'pending',
-      requestedAt: new Date(),
     });
 
-    await resetRequest.save();
+    // Check if dual write succeeded
+    if (!resetResult.mongoSuccess) {
+      console.error("MongoDB password reset request creation failed:", resetResult.mongoError);
+      return NextResponse.json(
+        { error: "حدث خطأ أثناء إنشاء طلب إعادة تعيين كلمة المرور" },
+        { status: 500 }
+      );
+    }
+
+    // Log SQL Server sync status
+    if (!resetResult.sqlSuccess) {
+      console.warn("SQL Server password reset request sync failed:", resetResult.sqlError);
+      // Continue with success since MongoDB succeeded
+    }
 
     // Send notification to admin/owner about the password reset request
     console.log(`Password reset request created for user: ${user.email} (${user.name})`);

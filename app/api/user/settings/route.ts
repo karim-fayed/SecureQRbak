@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, User } from "@/lib/db";
+import { userOperations } from "@/lib/database-abstraction";
 import * as jose from 'jose';
 import { compare, hash } from 'bcrypt';
 
@@ -30,14 +30,13 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { name, currentPassword, newPassword, language, timezone, apiPermissions, notificationSettings, securitySettings } = body;
 
-    // Connect to database
-    await connectToDatabase();
-
-    // Find the user
-    const user = await User.findById(decoded.id);
-    if (!user) {
+    // Find the user using dual database operations
+    const userResult = await userOperations.findById(decoded.id);
+    if (!userResult.success || !userResult.data) {
       return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
-    }    // Update user information
+    }
+
+    const user = userResult.data;
     const updateData: any = {};
 
     // Only update name if provided
@@ -84,7 +83,7 @@ export async function PUT(request: NextRequest) {
 
     // Only update if there are changes to make
     if (Object.keys(updateData).length > 0) {
-      await User.findByIdAndUpdate(decoded.id, updateData);
+      await userOperations.update(decoded.id, updateData);
     }
 
     return NextResponse.json({
@@ -118,14 +117,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "رمز مصادقة غير صالح" }, { status: 401 });
     }
 
-    // Connect to database
-    await connectToDatabase();
-
-    // Find the user and check subscription
-    const user = await User.findById(decoded.id);
-    if (!user) {
+    // Find the user using dual database operations
+    const userResult = await userOperations.findById(decoded.id);
+    if (!userResult.success || !userResult.data) {
       return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
     }
+
+    const user = userResult.data;
 
     // Check if user has premium or enterprise subscription
     const hasApiAccess = user.subscription?.plan === 'premium' || user.subscription?.plan === 'enterprise';
@@ -141,8 +139,8 @@ export async function POST(request: NextRequest) {
     const publicKey = generateRandomString(8);
     const privateKey = generateUUID();
 
-    // Update the user with new API keys
-    await User.findByIdAndUpdate(decoded.id, {
+    // Update the user with new API keys using dual operations
+    await userOperations.update(decoded.id, {
       apiKeys: {
         public: publicKey,
         private: privateKey

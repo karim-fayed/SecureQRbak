@@ -2,7 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { isAuthenticatedAsync, getCurrentUserAsync } from "@/lib/auth"
 import { connectToDatabase, User, QRCodeScan, QRCode as QRCodeModel } from "@/lib/db"
-import { hasAdminPrivileges, ensureOwnerPrivileges, isOwnerEmail } from "@/lib/admin-helpers"
+import { hasAdminPrivileges, ensureAdminPrivileges, isOwnerEmail } from "@/lib/admin-helpers"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,8 +24,8 @@ export default async function AdminQRVerificationPage() {
   // جلب بيانات المستخدم من قاعدة البيانات
   await connectToDatabase();
 
-  // التأكد من صلاحيات المالك دائماً
-  await ensureOwnerPrivileges(userToken.id);
+  // التأكد من صلاحيات الإدارة (يشمل المالك)
+  await ensureAdminPrivileges(userToken.id);
 
   const userData = await User.findById(userToken.id).select('-password');
 
