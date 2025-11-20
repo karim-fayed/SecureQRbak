@@ -86,11 +86,13 @@ async function connectToSQLServer(): Promise<sql.ConnectionPool> {
   }
 
   if (!sqlCached.promise) {
-    sqlCached.promise = sql.connect(SQL_SERVER_CONFIG).then((pool) => {
+    const pool = new sql.ConnectionPool(SQL_SERVER_CONFIG);
+    sqlCached.promise = pool.connect().then(() => {
       console.log('Connected to SQL Server');
       return pool;
     });
   }
+
 
   try {
     sqlCached.pool = await sqlCached.promise;
